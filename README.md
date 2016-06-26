@@ -1,7 +1,8 @@
-# linkedin_client
+# LinkedIn_client
 Basic CLI LinkedIn client on python, without OAuth
 
 Features:
-* Logins to linkedin with registered e-mail as username and password
+* Logins to LinkedIn with registered e-mail as username and password
 * Saves session cookies and requires to login only once
-* Reads messages from inbox
+* Exports conversions from inbox to json files
+* Exports groups information to json files
