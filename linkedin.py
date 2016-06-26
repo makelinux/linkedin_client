@@ -9,10 +9,8 @@ import re
 import requests, requests.utils, pickle
 from html2text import html2text
 import urllib
-import sys
 import os
 from urlparse import parse_qs, parse_qsl, urlparse
-import json
 import glob
 import HTMLParser
 import time
@@ -45,7 +43,7 @@ class linkedin_client():
         if mail is None:
             mail = os.environ.get('EMAIL');
         if mail is None:
-            mail = raw_input("E-mail for linkedin login: ")
+            mail = raw_input('E-mail for linkedin login: ')
         pw = getpass.getpass('Password for ' + mail + ' on ' + host + ' >');
         self.rs.get(host);
         self.bcookie = re.search('.*v=2\&([^"]+)', self.rs.cookies['bcookie']).group(1)
@@ -57,17 +55,16 @@ class linkedin_client():
         #print(resp.status_code)
         assert(resp.status_code == 302)
         resp = self.rs.get(host);
-        # ozidentity-templates/identity-content
         open('login.html', 'w').write(resp.content)
         soup = BeautifulSoup(resp.content)
         identity = soup.find('code', { 'id': 'ozidentity-templates/identity-content'})
         if identity is None:
-            print("Login failed");
+            print('Login failed');
             return
         with open('linkedin-session', 'w') as f:
             pickle.dump(requests.utils.dict_from_cookiejar(self.rs.cookies), f)
         data = json.loads(identity.getText())
-        print("Welcome", data["member"]["name"]["firstName"])
+        print('Welcome', data['member']['name']['firstName'])
 
     def identity(self):
         #resp = self.rs.get(host);
@@ -77,7 +74,7 @@ class linkedin_client():
         return json.loads(identity.getText())["member"]["name"]["firstName"]
 
     def inbox(self):
-        resp = self.rs.get(host + 'messaging', verify=False, headers = {'csrf-token': self.csrfToken });
+        resp = self.rs.get(host + 'messaging', headers = {'csrf-token': self.csrfToken });
         if resp.status_code != 200:
             print(resp)
         soup = BeautifulSoup(resp.content)
