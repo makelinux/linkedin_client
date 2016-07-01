@@ -113,10 +113,11 @@ class linkedin_client():
         open('identity.html', 'w').write(resp.content)
         soup = BeautifulSoup(resp.content)
         identity = soup.find('code', { 'id': 'ozidentity-templates/identity-content'})
+        #print(json.dumps(json.loads(identity.getText()), indent=4))
         identity2 = soup.find('code', { 'id': 'sharebox-static/templates/share-content'})
+        #print(json.dumps(json.loads(identity2.getText()), indent=4))
         self.id = json.loads(identity2.getText())['memberInfo']['id'];
-        pprint(json.loads(identity2.getText())['memberInfo']['name']);
-        #pprint(json.loads(identity.getText())['member'])
+        print(json.dumps(json.loads(identity2.getText())['memberInfo']))
         #pprint(soup);
         if self.csrfToken is None:
             self.csrfToken = json.loads(soup.find('code', { 'id': '__pageContext__'}).getText())['csrfToken']
@@ -134,6 +135,8 @@ class linkedin_client():
             for c in inbox['conversations']['conversationsBefore']:
                 #print('Conversation: ', unescape(c['subject']));
                 fn = filename(unescape(c['subject'])) + '.json'
+                if glob.glob(fn):
+                    continue
                 print(fn)
                 open(fn, 'w').write(json.dumps(c, indent=4, sort_keys=True))
                 continue # don't separate message
@@ -185,16 +188,20 @@ class linkedin_client():
             #pprint(data);
             for g in data['data']:
                 #print(d['group']['id'] + '\t' +d['group']['mini']['name'])
+                if g.has_key('adminMetadata'):
+                    print(json.dumps(g['adminMetadata']))
+                    self.accept(g['group']['id'])
                 fn = filename(g['group']['mini']['name']) + '.json'
+                if glob.glob(fn):
+                    continue
                 print(fn)
                 open(fn, 'w').write(json.dumps(g, indent=4, sort_keys=True))
             #pprint(g['group'])
         except (ValueError):
             raise(Exception(resp.content))
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     li = linkedin_client();
     li.inbox()
     li.identity()
-    print(li.id)
     li.groups()
