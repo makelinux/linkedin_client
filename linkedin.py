@@ -27,8 +27,8 @@ def filename(a):
     return re.sub(r'[ /?=&]+', '_', a)
 
 host = 'https://www.linkedin.com/'
-#reload(sys)
-#sys.setdefaultencoding('utf-8')
+reload(sys)
+sys.setdefaultencoding('utf-8')
 
 def getch():
     # http://love-python.blogspot.co.il/2010/03/getch-in-python-get-single-character.html
