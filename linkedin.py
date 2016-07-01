@@ -15,6 +15,8 @@ import glob
 import HTMLParser
 import time
 import getpass
+import termios
+import fcntl
 
 html_parser = HTMLParser.HTMLParser()
 
@@ -25,8 +27,44 @@ def filename(a):
     return re.sub(r'[ /?=&]+', '_', a)
 
 host = 'https://www.linkedin.com/'
-reload(sys)
-sys.setdefaultencoding('utf-8')
+#reload(sys)
+#sys.setdefaultencoding('utf-8')
+
+def getch():
+    # http://love-python.blogspot.co.il/2010/03/getch-in-python-get-single-character.html
+    fd = sys.stdin.fileno()
+
+    oldterm = termios.tcgetattr(fd)
+    newattr = termios.tcgetattr(fd)
+    newattr[3] = newattr[3] & ~termios.ICANON & ~termios.ECHO
+    termios.tcsetattr(fd, termios.TCSANOW, newattr)
+
+    oldflags = fcntl.fcntl(fd, fcntl.F_GETFL)
+    fcntl.fcntl(fd, fcntl.F_SETFL, oldflags | os.O_NONBLOCK)
+
+    try:
+        while 1:
+            try:
+                c = sys.stdin.read(1)
+                break
+            except IOError: pass
+    finally:
+        termios.tcsetattr(fd, termios.TCSAFLUSH, oldterm)
+        fcntl.fcntl(fd, fcntl.F_SETFL, oldflags)
+    return c
+
+def print_resp(resp):
+        pprint(resp.url)
+        pprint(resp.request)
+        pprint(resp.request.url)
+        pprint(resp.request.headers)
+        print('resp.request.body:')
+        pprint(resp.request.body)
+        pprint(resp)
+        pprint(resp.headers)
+        #pprint(resp.text)
+        open('rest.html', 'w').write(resp.content)
+        open('rest.txt', 'w').write((html2text(resp.content.decode('utf-8'))))
 
 class linkedin_client():
     def __init__(self):
@@ -111,6 +149,31 @@ class linkedin_client():
                     fn = filename(unescape(s['firstName']) + ' ' +  unescape(s['lastName']) + ', ' + unescape(m['subject'])) + '.json'
                     print(fn)
                     open(fn, 'w').write(json.dumps(m, indent=4, sort_keys=True))
+
+    def accept(self, gid):
+        resp = self.rs.get(host + 'communities-api/v1/memberships/community/'+str(gid)+'?membershipStatus=PENDING',
+                headers = {'csrf-token': self.csrfToken });
+        pending = resp.json()
+        open('pending.json', 'w').write(json.dumps(pending, indent=4, sort_keys=True))
+        for p in pending['data']:
+            while True:
+                print(p['mini']['id'], p['mini']['name'], '-', p['mini']['headline'])
+                print('Accept, Reject?');
+                c = getch();
+                if ord(c) == 27: break
+                c = re.sub(r'[ay]', 'accept', c)
+                c = re.sub(r'[rn]', 'reject', c)
+                try:
+                    print(c)
+                    resp = self.rs.post(host + 'communities-api/v1/membership/request/' + c,
+                            data = json.dumps({'communityId': str(gid), 'requesterMembershipId': p['mini']['id']}),
+                            headers = {'csrf-token': self.csrfToken, 'content-type': 'application/json'})
+                    if resp.status_code != 200:
+                        print('failed')
+                        print_resp(resp)
+                    break
+                except KeyError:
+                    pass
 
     def groups(self):
         resp = self.rs.get(host + 'communities-api/v1/communities/memberships/' + self.id + '?' +

@@ -6,3 +6,4 @@ Features:
 * Saves session cookies and requires to login only once
 * Exports conversions from inbox to json files
 * Exports groups information to json files
+* Accepts members to administrated groups
