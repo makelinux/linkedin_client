@@ -8,7 +8,6 @@ import sys, getopt
 import re
 import requests, requests.utils, pickle
 from html2text import html2text
-import urllib
 import os
 from urlparse import parse_qs, parse_qsl, urlparse
 import glob
@@ -17,6 +16,8 @@ import time
 import getpass
 import termios
 import fcntl
+from datetime import datetime
+import ago
 
 html_parser = HTMLParser.HTMLParser()
 
@@ -178,6 +179,31 @@ class linkedin_client():
                 except KeyError:
                     pass
 
+    def group_posts(self, gid, cat, count = 10):
+        print(cat)
+        resp = self.rs.get(host + 'communities-api/v1/activities/community/'+gid+'?activityType='+cat+'&sort=RECENT&count='+str(count)+'&start=0',
+                 headers = {'csrf-token': self.csrfToken });
+        #print('resp.content', resp.content)
+        #pprint(json.loads(resp.content))
+        for d in json.loads(resp.content)['data']:
+            #print(time.strftime('%y-%m-%d %H:%M', time.localtime(int(d['datePosted'])/1000)), d['title']);
+            print(ago.human(datetime.fromtimestamp(int(d['datePosted'])/1000), precision=1, abbreviate=True), '\t', d['title']);
+            #print(humanize.naturalday(time.localtime(int(d['datePosted'])/1000)), d['title']);
+
+    def highlights(self, cat = 'DISCUSSION', count = 10):
+        resp = self.rs.get(host +
+                'communities-api/v1/discussion/highlights/'+self.id+'?type='+cat+'&sort=RECENT&count='+str(count)+'&start=0',
+                 headers = {'csrf-token': self.csrfToken });
+        #print('resp.content', resp.content)
+        #pprint(json.loads(resp.content))
+        print('\nHighlights\n')
+        for d in json.loads(resp.content)['data']:
+            #print(time.strftime('%y-%m-%d %H:%M', time.localtime(int(d['datePosted'])/1000)), d['title']);
+            print(ago.human(datetime.fromtimestamp(int(d['discussion']['datePosted'])/1000), precision=1, abbreviate=True), '\t',
+                    d['community']['name'] + ':',
+                    d['discussion']['title']);
+            #print(humanize.naturalday(time.localtime(int(d['datePosted'])/1000)), d['title']);
+
     def groups(self):
         resp = self.rs.get(host + 'communities-api/v1/communities/memberships/' + self.id + '?' +
                 #+ '?projection=FULL&sortBy=RECENTLY_JOINED',
@@ -187,7 +213,11 @@ class linkedin_client():
             data = json.loads(resp.content)
             #pprint(data);
             for g in data['data']:
-                #print(d['group']['id'] + '\t' +d['group']['mini']['name'])
+                #print(g['group']['id'] + '\t' + g['group']['mini']['name'])
+                print('\n' + g['group']['mini']['name'] + '\n')
+                li.group_posts(g['group']['id'], 'DISCUSSION');
+                li.group_posts(g['group']['id'], 'JOB');
+                #print(g['group']['id'] + '\t' + g['group']['mini']['name'])
                 if g.has_key('adminMetadata'):
                     print(json.dumps(g['adminMetadata']))
                     self.accept(g['group']['id'])
@@ -204,4 +234,5 @@ if __name__ == '__main__':
     li = linkedin_client();
     li.inbox()
     li.identity()
+    li.highlights()
     li.groups()
