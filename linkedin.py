@@ -64,8 +64,8 @@ def print_resp(resp):
         pprint(resp)
         pprint(resp.headers)
         #pprint(resp.text)
-        open('rest.html', 'w').write(resp.content)
-        open('rest.txt', 'w').write((html2text(resp.content.decode('utf-8'))))
+        open('resp.html', 'w').write(resp.content)
+        open('resp.txt', 'w').write((html2text(resp.content.decode('utf-8'))))
 
 class linkedin_client():
     def __init__(self):
@@ -155,7 +155,7 @@ class linkedin_client():
                     open(fn, 'w').write(json.dumps(m, indent=4, sort_keys=True))
 
     def accept(self, gid):
-        resp = self.rs.get(host + 'communities-api/v1/memberships/community/'+str(gid)+'?membershipStatus=PENDING',
+        resp = self.rs.get(host + 'communities-api/v1/memberships/community/' + str(gid) + '?membershipStatus=PENDING',
                 headers = {'csrf-token': self.csrfToken });
         pending = resp.json()
         open('pending.json', 'w').write(json.dumps(pending, indent=4, sort_keys=True))
@@ -181,19 +181,20 @@ class linkedin_client():
 
     def group_posts(self, gid, cat, count = 10):
         print(cat)
-        resp = self.rs.get(host + 'communities-api/v1/activities/community/'+gid+'?activityType='+cat+'&sort=RECENT&count='+str(count)+'&start=0',
-                 headers = {'csrf-token': self.csrfToken });
+        resp = self.rs.get(host + 'communities-api/v1/activities/community/' + gid + '?activityType=' + cat +
+            '&sort=RECENT&count=' + str(count) + '&start=0',
+            headers = {'csrf-token': self.csrfToken });
         #print('resp.content', resp.content)
         #pprint(json.loads(resp.content))
         for d in json.loads(resp.content)['data']:
             #print(time.strftime('%y-%m-%d %H:%M', time.localtime(int(d['datePosted'])/1000)), d['title']);
-            print(ago.human(datetime.fromtimestamp(int(d['datePosted'])/1000), precision=1, abbreviate=True), '\t', d['title']);
+            print(ago.human(datetime.fromtimestamp(int(d['datePosted'])/1000), precision=1, abbreviate=True), '\t', d['author']['name'] + ':', d['title']);
             #print(humanize.naturalday(time.localtime(int(d['datePosted'])/1000)), d['title']);
 
     def highlights(self, cat = 'DISCUSSION', count = 10):
         resp = self.rs.get(host +
-                'communities-api/v1/discussion/highlights/'+self.id+'?type='+cat+'&sort=RECENT&count='+str(count)+'&start=0',
-                 headers = {'csrf-token': self.csrfToken });
+            'communities-api/v1/discussion/highlights/' + self.id + '?type=' + cat + '&sort=RECENT&count=' + str(count) + '&start=0',
+            headers = {'csrf-token': self.csrfToken });
         #print('resp.content', resp.content)
         #pprint(json.loads(resp.content))
         print('\nHighlights\n')
@@ -232,7 +233,6 @@ class linkedin_client():
 
 if __name__ == '__main__':
     li = linkedin_client();
-    li.inbox()
     li.identity()
     li.highlights()
     li.groups()
