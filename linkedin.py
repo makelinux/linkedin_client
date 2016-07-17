@@ -18,6 +18,12 @@ import termios
 import fcntl
 from datetime import datetime
 import ago
+import argparse
+
+ap = argparse.ArgumentParser()
+ap.add_argument("--verbosity", action="store_true", help="increase output verbosity")
+ap.add_argument("groups_admin")
+args = ap.parse_args()
 
 html_parser = HTMLParser.HTMLParser()
 
@@ -81,6 +87,10 @@ class linkedin_client():
         if not 'bcookie' in self.rs.cookies:
             self.linkedin_login();
 
+    def verbose(self, data):
+        if args.verbosity:
+            print(json.dumps(data, indent=4, sort_keys = True))
+
     def linkedin_login(self):
         mail=os.environ.get('LINKEDIN_LOGIN')
         if mail is None:
@@ -135,11 +145,12 @@ class linkedin_client():
             open(fn, 'w').write(json.dumps(inbox, indent=4, sort_keys=True))
             for c in inbox['conversations']['conversationsBefore']:
                 #print('Conversation: ', unescape(c['subject']));
-                fn = filename(unescape(c['subject'])) + '.json'
-                if glob.glob(fn):
-                    continue
-                print(fn)
-                open(fn, 'w').write(json.dumps(c, indent=4, sort_keys=True))
+                #fn = filename(unescape(c['subject'])) + '.json'
+                #if glob.glob(fn):
+                #   continue
+                #print(fn)
+                #open(fn, 'w').write(json.dumps(c, indent=4, sort_keys=True))
+                self.verbose(c)
                 continue # don't separate message
                 for m in c['messages']:
                     s = m['sender']
@@ -150,19 +161,21 @@ class linkedin_client():
                     #print('Subject: ', unescape(m['subject']));
                     #print('Read: ', unescape(str(m['read'])));
                     #print('\n' + unescape(str(m['body'])) + '\n\n')
-                    fn = filename(unescape(s['firstName']) + ' ' +  unescape(s['lastName']) + ', ' + unescape(m['subject'])) + '.json'
-                    print(fn)
-                    open(fn, 'w').write(json.dumps(m, indent=4, sort_keys=True))
+                    #fn = filename(unescape(s['firstName']) + ' ' +  unescape(s['lastName']) + ', ' + unescape(m['subject'])) + '.json'
+                    #print(fn)
+                    #open(fn, 'w').write(json.dumps(m, indent=4, sort_keys=True))
+                    self.verbose(m)
 
     def accept(self, gid):
         resp = self.rs.get(host + 'communities-api/v1/memberships/community/' + str(gid) + '?membershipStatus=PENDING',
                 headers = {'csrf-token': self.csrfToken });
         pending = resp.json()
-        open('pending.json', 'w').write(json.dumps(pending, indent=4, sort_keys=True))
+        self.verbose(pending)
         for p in pending['data']:
             while True:
-                print(p['mini']['id'], p['mini']['name'], '-', p['mini']['headline'])
-                print('Accept, Reject?');
+                print(p['mini']['id'], p['mini']['name'], '-', p['mini']['headline'], p['mini']['profileUrl'])
+                self.verbose(p['mini'])
+                print('Accept, Reject?')
                 c = getch();
                 if ord(c) == 27: break
                 c = re.sub(r'[ay]', 'accept', c)
@@ -232,7 +245,10 @@ class linkedin_client():
             raise(Exception(resp.content))
 
 if __name__ == '__main__':
+    if args.verbosity:
+            print("verbosity turned on")
     li = linkedin_client();
     li.identity()
-    li.highlights()
-    li.groups()
+    for i in range(1, len(sys.argv)):
+        if len(sys.argv[i]) > 1 and not sys.argv[i].startswith('--'):
+            li.eval(sys.argv[i])
