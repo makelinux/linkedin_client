@@ -178,12 +178,16 @@ class linkedin_client():
                 print('Accept, Reject?')
                 c = getch();
                 if ord(c) == 27: break
-                c = re.sub(r'[ay]', 'accept', c)
-                c = re.sub(r'[rn]', 'reject', c)
+                if c in ['a', 'y']: a = 'accept'
+                elif c in ['r', 'n']: a = 'reject'
+                else: continue
                 try:
-                    print(c)
-                    resp = self.rs.post(host + 'communities-api/v1/membership/request/' + c,
-                            data = json.dumps({'communityId': str(gid), 'requesterMembershipId': p['mini']['id']}),
+                    print(a)
+                    resp = self.rs.post(host + 'communities-api/v1/membership/request/' + a,
+                            data = json.dumps({'communityId': str(gid),
+                                'requesterMembershipId': p['mini']['id'], # for accept
+                                'requesterMemberId': p['mini']['id'], # for reject
+                                }),
                             headers = {'csrf-token': self.csrfToken, 'content-type': 'application/json'})
                     if resp.status_code != 200:
                         print('failed')
