@@ -5,6 +5,5 @@ Features:
 * Logins to LinkedIn with registered e-mail as username and password
 * Saves session cookies and requires to login only once
 * Prints group posts titles
-* Exports conversions from inbox to json files
-* Exports groups information to json files
-* Accepts members to administrated groups
+* Verbose mode prints json raw data
+* Accepts new members and approves post to administrated groups
