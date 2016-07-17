@@ -222,7 +222,54 @@ class linkedin_client():
                     d['discussion']['title']);
             #print(humanize.naturalday(time.localtime(int(d['datePosted'])/1000)), d['title']);
 
-    def groups(self):
+    def approve(self, gid, cat):
+        resp = self.rs.get(host + 'manageGroup?dispModQueue=&gid=' + gid + '&category=' + cat)
+        soup = BeautifulSoup(resp.content)
+        for c in soup.findAll('td'):
+            if c.has_key('data-li-itemkey'):
+                item = c._getAttrMap()['data-li-itemkey']
+                print(item)
+                print(c.find('span', { 'class': 'stamp'}).getText())
+                n = c.find('a', { 'class': 'full-name'})
+                print(n.getText('\n'), parse_qs(urlparse(n['href']).query)['memberID'][0])
+                less = c.find('a', { 'class': 'showLess'})
+                if less: less.extract()
+                print('Title:', c.find('span', { 'class': 'title'}).getText())
+                f = c.find('p', { 'class': 'discussion details full hide'})
+                if not f:
+                    f = c.find('p', { 'class': 'article details'})
+                if f:
+                    print(unescape(f.getText('\n')))
+                else:
+                    print('\nall:\n', c)
+                l = c.find('a', { 'title': 'View link'})
+                if l: print('Link ', l['href'])
+                print('--\n');
+                while True:
+                    if cat == 'SD':
+                        print('Move to Jobs, ', end="")
+                    print('Approve, Delete?');
+                    c = getch();
+                    if ord(c) == 27: break
+                    try:
+                        if c in ['a', 'y']: a = 'approveModItems'
+                        elif c in ['d', 'n']: a = 'deleteModItems'
+                        elif c in ['j', 'm']: a = 'moveModItemsToJobs'
+                        else: continue
+                        print(a);
+                        resp = self.rs.post(host + 'manageGroup',
+                            data = 'ajax=ajax&' + a + '=' + a + '&trk=sbq-ap-l&csrfToken=' + self.csrfToken +
+                                '&gid=' + str(gid) + '&category=' + cat + '&split_page=1&allItemKeys=' + item + '&items=' + item + '&',
+                            #data = {'ajax':'ajax', a:a, 'csrfToken':self.csrfToken, 'gid': gid, 'category':cat, 'allItemKeys':item, 'items':item },
+                            headers = {'csrf-token': self.csrfToken, 'content-type': 'application/x-www-form-urlencoded' })
+                        if resp.status_code != 200:
+                            print('failed')
+                            print_resp(resp)
+                        break
+                    except KeyError:
+                        pass
+
+    def groups(self, with_posts = True, dump_metadata = False):
         resp = self.rs.get(host + 'communities-api/v1/communities/memberships/' + self.id + '?' +
                 #+ '?projection=FULL&sortBy=RECENTLY_JOINED',
                 '&count=500',
@@ -231,22 +278,54 @@ class linkedin_client():
             data = json.loads(resp.content)
             #pprint(data);
             for g in data['data']:
-                #print(g['group']['id'] + '\t' + g['group']['mini']['name'])
-                print('\n' + g['group']['mini']['name'] + '\n')
-                li.group_posts(g['group']['id'], 'DISCUSSION');
-                li.group_posts(g['group']['id'], 'JOB');
-                #print(g['group']['id'] + '\t' + g['group']['mini']['name'])
-                if g.has_key('adminMetadata'):
-                    print(json.dumps(g['adminMetadata']))
-                    self.accept(g['group']['id'])
-                fn = filename(g['group']['mini']['name']) + '.json'
-                if glob.glob(fn):
-                    continue
-                print(fn)
-                open(fn, 'w').write(json.dumps(g, indent=4, sort_keys=True))
+                print(g['group']['mini']['name'])
+                if with_posts:
+                    li.group_posts(g['group']['id'], 'DISCUSSION');
+                    li.group_posts(g['group']['id'], 'JOB');
+                    print('\n')
+                    self.verbose(g)
+                #if dump_metadata:
+                    #fn = filename(g['group']['mini']['name']) + '.json'
+                    #if glob.glob(fn):
+                    #    continue
+                    #print(fn)
+                    #open(fn, 'w').write(json.dumps(g, indent=4, sort_keys=True))
             #pprint(g['group'])
         except (ValueError):
             raise(Exception(resp.content))
+
+    def groups_admin(self, with_posts = True):
+        resp = self.rs.get(host + 'communities-api/v1/communities/memberships/' + self.id + '?' +
+                #+ '?projection=FULL&sortBy=RECENTLY_JOINED',
+                '&count=500',
+                headers = {'csrf-token': self.csrfToken });
+        try:
+            data = json.loads(resp.content)
+            #pprint(data);
+            for g in data['data']:
+                if g.has_key('adminMetadata'):
+                    print(g['group']['mini']['name'])
+                    #print(json.dumps(g['adminMetadata']))
+                    self.accept(g['group']['id'])
+                    if with_posts:
+                        li.group_posts(g['group']['id'], 'DISCUSSION');
+                    self.approve(g['group']['id'], 'SD');
+                    if with_posts:
+                        li.group_posts(g['group']['id'], 'JOB');
+                    self.approve(g['group']['id'], 'SJ');
+                    print('\n')
+            #pprint(g['group'])
+        except (ValueError):
+            raise(Exception(resp.content))
+
+    def eval(self, cmd):
+        eval('self.' + cmd + '()')
+
+    def help(self):
+        print('highlights');
+        print('groups_admin');
+        print('groups');
+        print('inbox');
 
 if __name__ == '__main__':
     if args.verbosity:
