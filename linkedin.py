@@ -21,8 +21,9 @@ import ago
 import argparse
 
 ap = argparse.ArgumentParser()
-ap.add_argument("--verbosity", action="store_true", help="increase output verbosity")
-ap.add_argument("groups_admin")
+ap.add_argument("--verbose",  action='store_true', help="output raw json")
+#ap.add_argument("groups_admin")
+ap.add_argument("command", nargs='*', help='groups_admin, groups, inbox')
 args = ap.parse_args()
 
 html_parser = HTMLParser.HTMLParser()
@@ -88,7 +89,7 @@ class linkedin_client():
             self.linkedin_login();
 
     def verbose(self, data):
-        if args.verbosity:
+        if args.verbose:
             print(json.dumps(data, indent=4, sort_keys = True))
 
     def linkedin_login(self):
@@ -328,10 +329,9 @@ class linkedin_client():
         print('inbox');
 
 if __name__ == '__main__':
-    if args.verbosity:
-            print("verbosity turned on")
-    li = linkedin_client();
-    li.identity()
-    for i in range(1, len(sys.argv)):
-        if len(sys.argv[i]) > 1 and not sys.argv[i].startswith('--'):
-            li.eval(sys.argv[i])
+    if args.verbose:
+            print("verbose turned on")
+    for c in args.command:
+        li = linkedin_client();
+        li.identity()
+        li.eval(c)
