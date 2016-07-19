@@ -244,7 +244,11 @@ class linkedin_client():
                 else:
                     print('\nall:\n', c)
                 l = c.find('a', { 'title': 'View link'})
-                if l: print('Link ', l['href'])
+                if l:
+                    link = parse_qs(urlparse(l['href']).query)['articleURL'][0]
+                    print('Link ', link)
+                    try: print(BeautifulSoup(self.rs.get(link, verify=False).content).title.string)
+                    except: pass
                 print('--\n');
                 while True:
                     if cat == 'SD':
