@@ -333,6 +333,8 @@ class linkedin_client():
         print('inbox');
 
 if __name__ == '__main__':
+    if len(sys.argv) == 1:
+        ap.print_help()
     if args.verbose:
             print("verbose turned on")
     for c in args.command:
