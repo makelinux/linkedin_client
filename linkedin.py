@@ -168,16 +168,22 @@ class linkedin_client():
                     #open(fn, 'w').write(json.dumps(m, indent=4, sort_keys=True))
                     self.verbose(m)
 
-    def accept(self, gid):
+    def member(self, m):
+        print(m['id'], m['name'], '-', m['headline'], '-',
+            BeautifulSoup(self.rs.get(m['profileUrl']).content).find('span', { 'class': 'locality'}).getText())
+        print(m['profileUrl'])
+
+    def accept(self, g):
+        gid = g['id']
         resp = self.rs.get(host + 'communities-api/v1/memberships/community/' + str(gid) + '?membershipStatus=PENDING',
                 headers = {'csrf-token': self.csrfToken });
         pending = resp.json()
         self.verbose(pending)
         for p in pending['data']:
             while True:
-                print(p['mini']['id'], p['mini']['name'], '-', p['mini']['headline'], p['mini']['profileUrl'])
+                self.member(p['mini'])
                 self.verbose(p['mini'])
-                print('Accept, Reject?')
+                print('Accept, Reject to', g['mini']['name'], '?')
                 c = getch();
                 if ord(c) == 27: break
                 if c in ['a', 'y']: a = 'accept'
@@ -267,15 +273,15 @@ class linkedin_client():
                 while True:
                     if cat == 'SD':
                         print('Move to Jobs, ', end="")
-                    print('Approve, Delete?');
-                    c = getch();
+                    print('Approve, Delete, Esc', g['mini']['name'], '?')
+                    c = getch()
                     if ord(c) == 27: break
                     try:
                         if c in ['a', 'y']: a = 'approveModItems'
                         elif c in ['d', 'n']: a = 'deleteModItems'
                         elif c in ['j', 'm']: a = 'moveModItemsToJobs'
-                        else: continue
-                        print(a);
+                        else: continue # and retry
+                        print(a)
                         resp = self.rs.post(host + 'manageGroup',
                             data = 'ajax=ajax&' + a + '=' + a + '&trk=sbq-ap-l&csrfToken=' + self.csrfToken +
                                 '&gid=' + str(gid) + '&category=' + cat + '&split_page=1&allItemKeys=' + item + '&items=' + item + '&',
@@ -288,7 +294,7 @@ class linkedin_client():
                     except KeyError:
                         pass
 
-    def groups(self, with_posts = True, dump_metadata = False):
+    def groups(self, with_posts = True, dump_metadata = False, posts = 10):
         resp = self.rs.get(host + 'communities-api/v1/communities/memberships/' + self.id + '?' +
                 #+ '?projection=FULL&sortBy=RECENTLY_JOINED',
                 '&count=500',
@@ -334,6 +340,8 @@ class linkedin_client():
                         map.update(li.group_posts(g['group']['id'], 'JOB', 100))
                     self.approve(g['group'], 'SJ')
                     print('\n')
+            # DELETE
+            # 'communities-api/v1/activity/' + d['id']+'?groupId=1966330&discussionId=6154295060339900419",
             #pprint(g['group'])
         except (ValueError):
             raise(Exception(resp.content))

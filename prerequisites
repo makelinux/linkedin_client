@@ -1,4 +1,5 @@
 #!/bin/sh
 
-sudo pip install ago HTMLParser BeautifulSoup html2text
+sudo apt-get -y install python-pip
+sudo pip install ago HTMLParser BeautifulSoup html2text requests
 #urlparse
