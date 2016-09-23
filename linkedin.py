@@ -87,7 +87,7 @@ class linkedin_client():
         except:
             pass
         if not 'bcookie' in self.rs.cookies:
-            self.linkedin_login();
+            self.linkedin_login()
 
     def verbose(self, data):
         if args.verbose:
@@ -96,11 +96,11 @@ class linkedin_client():
     def linkedin_login(self):
         mail=os.environ.get('LINKEDIN_LOGIN')
         if mail is None:
-            mail = os.environ.get('EMAIL');
+            mail = os.environ.get('EMAIL')
         if mail is None:
             mail = raw_input('E-mail for linkedin login: ')
-        pw = getpass.getpass('Password for ' + mail + ' on ' + host + ' >');
-        self.rs.get(host);
+        pw = getpass.getpass('Password for ' + mail + ' on ' + host + ' >')
+        self.rs.get(host)
         self.bcookie = re.search('.*v=2\&([^"]+)', self.rs.cookies['bcookie']).group(1)
         resp = self.rs.post(host + 'uas/login-submit',
                 allow_redirects=False,
@@ -114,7 +114,7 @@ class linkedin_client():
         soup = BeautifulSoup(resp.content)
         identity = soup.find('code', { 'id': 'ozidentity-templates/identity-content'})
         if identity is None:
-            print('Login failed');
+            print('Login failed')
             return
         with open('linkedin-session', 'w') as f:
             pickle.dump(requests.utils.dict_from_cookiejar(self.rs.cookies), f)
@@ -122,7 +122,7 @@ class linkedin_client():
         print('Welcome', data['member']['name']['firstName'])
 
     def identity(self):
-        resp = self.rs.get(host);
+        resp = self.rs.get(host)
         open('identity.html', 'w').write(resp.content)
         soup = BeautifulSoup(resp.content)
         identity = soup.find('code', { 'id': 'ozidentity-templates/identity-content'})
@@ -202,7 +202,7 @@ class linkedin_client():
         print(cat)
         resp = self.rs.get(host + 'communities-api/v1/activities/community/' + gid + '?activityType=' + cat +
             '&sort=RECENT&count=' + str(count) + '&start=0',
-            headers = {'csrf-token': self.csrfToken });
+            headers = {'csrf-token': self.csrfToken })
         #print('resp.content', resp.content)
         #pprint(json.loads(resp.content))
         map = dict()
@@ -221,16 +221,16 @@ class linkedin_client():
     def highlights(self, cat = 'DISCUSSION', count = 10):
         resp = self.rs.get(host +
             'communities-api/v1/discussion/highlights/' + self.id + '?type=' + cat + '&sort=RECENT&count=' + str(count) + '&start=0',
-            headers = {'csrf-token': self.csrfToken });
+            headers = {'csrf-token': self.csrfToken })
         #print('resp.content', resp.content)
         #pprint(json.loads(resp.content))
         print('\nHighlights\n')
         for d in json.loads(resp.content)['data']:
-            #print(time.strftime('%y-%m-%d %H:%M', time.localtime(int(d['datePosted'])/1000)), d['title']);
+            #print(time.strftime('%y-%m-%d %H:%M', time.localtime(int(d['datePosted'])/1000)), d['title'])
             print(ago.human(datetime.fromtimestamp(int(d['discussion']['datePosted'])/1000), precision=1, abbreviate=True), '\t',
                     d['community']['name'] + ':',
-                    d['discussion']['title']);
-            #print(humanize.naturalday(time.localtime(int(d['datePosted'])/1000)), d['title']);
+                    d['discussion']['title'])
+            #print(humanize.naturalday(time.localtime(int(d['datePosted'])/1000)), d['title'])
 
     def approve(self, g, cat, map = dict()):
         gid = g['id']
@@ -263,7 +263,7 @@ class linkedin_client():
                     print('Link ', link)
                     try: print(BeautifulSoup(self.rs.get(link, verify=False).content).title.string)
                     except: pass
-                print('--\n');
+                print('--\n')
                 while True:
                     if cat == 'SD':
                         print('Move to Jobs, ', end="")
@@ -292,15 +292,15 @@ class linkedin_client():
         resp = self.rs.get(host + 'communities-api/v1/communities/memberships/' + self.id + '?' +
                 #+ '?projection=FULL&sortBy=RECENTLY_JOINED',
                 '&count=500',
-                headers = {'csrf-token': self.csrfToken });
+                headers = {'csrf-token': self.csrfToken })
         try:
             data = json.loads(resp.content)
-            #pprint(data);
+            #pprint(data)
             for g in data['data']:
                 print(g['group']['mini']['name'])
                 if with_posts:
-                    li.group_posts(g['group']['id'], 'DISCUSSION');
-                    li.group_posts(g['group']['id'], 'JOB');
+                    li.group_posts(g['group']['id'], 'DISCUSSION', posts)
+                    li.group_posts(g['group']['id'], 'JOB', posts)
                     print('\n')
                     self.verbose(g)
                 #if dump_metadata:
@@ -317,10 +317,10 @@ class linkedin_client():
         resp = self.rs.get(host + 'communities-api/v1/communities/memberships/' + self.id + '?' +
                 #+ '?projection=FULL&sortBy=RECENTLY_JOINED',
                 '&count=500',
-                headers = {'csrf-token': self.csrfToken });
+                headers = {'csrf-token': self.csrfToken })
         try:
             data = json.loads(resp.content)
-            #pprint(data);
+            #pprint(data)
             for g in data['data']:
                 if g.has_key('adminMetadata'):
                     print(g['group']['mini']['name'])
@@ -342,10 +342,10 @@ class linkedin_client():
         eval('self.' + cmd + '()')
 
     def help(self):
-        print('highlights');
-        print('groups_admin');
-        print('groups');
-        print('inbox');
+        print('highlights')
+        print('groups_admin')
+        print('groups')
+        print('inbox')
 
 if __name__ == '__main__':
     if len(sys.argv) == 1:
@@ -353,6 +353,6 @@ if __name__ == '__main__':
     if args.verbose:
             print("verbose turned on")
     for c in args.command:
-        li = linkedin_client();
+        li = linkedin_client()
         li.identity()
         li.eval(c)
