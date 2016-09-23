@@ -19,6 +19,7 @@ import fcntl
 from datetime import datetime
 import ago
 import argparse
+import hashlib
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--verbose",  action='store_true', help="output raw json")
@@ -204,10 +205,18 @@ class linkedin_client():
             headers = {'csrf-token': self.csrfToken });
         #print('resp.content', resp.content)
         #pprint(json.loads(resp.content))
+        map = dict()
         for d in json.loads(resp.content)['data']:
+            #print(json.dumps(d, indent=4, sort_keys = True))
+            m = hashlib.md5()
+            m.update(d['author']['name'] + d['title'])
             #print(time.strftime('%y-%m-%d %H:%M', time.localtime(int(d['datePosted'])/1000)), d['title']);
-            print(ago.human(datetime.fromtimestamp(int(d['datePosted'])/1000), precision=1, abbreviate=True), '\t', d['author']['name'] + ':', d['title']);
-            #print(humanize.naturalday(time.localtime(int(d['datePosted'])/1000)), d['title']);
+            print(map.get(m.hexdigest(), False),
+                    ago.human(datetime.fromtimestamp(int(d['datePosted'])/1000), precision=1, abbreviate=True), '\t',
+                    d['author']['name'] + ':', d['title'])
+            map[m.hexdigest()] = True
+            #print(humanize.naturalday(time.localtime(int(d['datePosted'])/1000)), d['title'])
+        return map
 
     def highlights(self, cat = 'DISCUSSION', count = 10):
         resp = self.rs.get(host +
@@ -223,7 +232,8 @@ class linkedin_client():
                     d['discussion']['title']);
             #print(humanize.naturalday(time.localtime(int(d['datePosted'])/1000)), d['title']);
 
-    def approve(self, gid, cat):
+    def approve(self, g, cat, map = dict()):
+        gid = g['id']
         resp = self.rs.get(host + 'manageGroup?dispModQueue=&gid=' + gid + '&category=' + cat)
         soup = BeautifulSoup(resp.content)
         for c in soup.findAll('td'):
@@ -236,6 +246,10 @@ class linkedin_client():
                 less = c.find('a', { 'class': 'showLess'})
                 if less: less.extract()
                 print('Title:', c.find('span', { 'class': 'title'}).getText())
+                m = hashlib.md5()
+                m.update("d['author']['name']*" + c.find('span', { 'class': 'title'}).getText())
+                #print(time.strftime('%y-%m-%d %H:%M', time.localtime(int(d['datePosted'])/1000)), d['title'])
+                print(map.get(m.hexdigest(), False))
                 f = c.find('p', { 'class': 'discussion details full hide'})
                 if not f:
                     f = c.find('p', { 'class': 'article details'})
@@ -311,13 +325,14 @@ class linkedin_client():
                 if g.has_key('adminMetadata'):
                     print(g['group']['mini']['name'])
                     #print(json.dumps(g['adminMetadata']))
-                    self.accept(g['group']['id'])
+                    self.accept(g['group'])
+                    map = dict()
                     if with_posts:
-                        li.group_posts(g['group']['id'], 'DISCUSSION');
-                    self.approve(g['group']['id'], 'SD');
+                        map.update(li.group_posts(g['group']['id'], 'DISCUSSION', 10))
+                    self.approve(g['group'], 'SD')
                     if with_posts:
-                        li.group_posts(g['group']['id'], 'JOB');
-                    self.approve(g['group']['id'], 'SJ');
+                        map.update(li.group_posts(g['group']['id'], 'JOB', 100))
+                    self.approve(g['group'], 'SJ')
                     print('\n')
             #pprint(g['group'])
         except (ValueError):
