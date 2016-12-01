@@ -128,6 +128,8 @@ class linkedin_client():
         identity = soup.find('code', { 'id': 'ozidentity-templates/identity-content'})
         #print(json.dumps(json.loads(identity.getText()), indent=4))
         identity2 = soup.find('code', { 'id': 'sharebox-static/templates/share-content'})
+        if identity2 is None:
+            pprint(soup);
         #print(json.dumps(json.loads(identity2.getText()), indent=4))
         self.id = json.loads(identity2.getText())['memberInfo']['id'];
         print(json.dumps(json.loads(identity2.getText())['memberInfo']))
@@ -169,9 +171,22 @@ class linkedin_client():
                     self.verbose(m)
 
     def member(self, m):
-        print(m['id'], m['name'], '-', m['headline'], '-',
-            BeautifulSoup(self.rs.get(m['profileUrl']).content).find('span', { 'class': 'locality'}).getText())
-        print(m['profileUrl'])
+        locality = BeautifulSoup(self.rs.get(m['profileUrl']).content).find('span', { 'class': 'locality'}).getText()
+        print(m['id'], m['name'], '-', m['headline'], '-', locality)
+        #print(m['profileUrl'])
+
+    def members(self, g):
+        gid = g['id']
+        resp = self.rs.get(host + 'communities-api/v1/memberships/community/' + str(gid)
+                + '?membershipStatus=MEMBER&start=0&projection=FULL'
+                #+ '?projection=FULL&sortBy=RECENTLY_JOINED&count=500&start=0',
+                + '?count=500'
+                ,
+                headers = {'csrf-token': self.csrfToken });
+        data = resp.json()
+        self.verbose(data)
+        for p in data['data']:
+            self.member(p['mini'])
 
     def accept(self, g):
         gid = g['id']
@@ -332,6 +347,7 @@ class linkedin_client():
                     print(g['group']['mini']['name'])
                     #print(json.dumps(g['adminMetadata']))
                     self.accept(g['group'])
+                    #self.members(g['group'])
                     map = dict()
                     if with_posts:
                         map.update(li.group_posts(g['group']['id'], 'DISCUSSION', 10))
